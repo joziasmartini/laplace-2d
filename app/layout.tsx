@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Transferência de Calor 2D · Laplace",
-  description: "Simulação da Equação de Laplace por diferenças finitas",
+  title: "Transferência de Calor 3D · Laplace",
+  description: "Simulação 3D da Equação de Laplace por diferenças finitas",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

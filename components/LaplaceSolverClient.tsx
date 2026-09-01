@@ -11,9 +11,31 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
+import HeatPlate3D from "./HeatPlate3D";
+import {
+  boundaryExtrema,
+  makeInitialField,
+  sweepField,
+} from "@/lib/laplaceField";
 
-type BoundaryKey = "top" | "right" | "bottom" | "left";
-type GridValue = number[][];
+type BoundaryKey = "top" | "bottom" | "north" | "south" | "east" | "west";
+type GridValue = number[][][];
+
+const GRID_SIZE = 4;
+
+const INTERIOR_KEYS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"] as const;
+type PointKey = (typeof INTERIOR_KEYS)[number];
+
+const NODE_COORDS: Record<PointKey, [number, number, number]> = {
+  P1: [1, 1, 1],
+  P2: [1, 1, 2],
+  P3: [1, 2, 1],
+  P4: [1, 2, 2],
+  P5: [2, 1, 1],
+  P6: [2, 1, 2],
+  P7: [2, 2, 1],
+  P8: [2, 2, 2],
+};
 
 interface PointHistory {
   iteration: number;
@@ -21,62 +43,83 @@ interface PointHistory {
   P2: number;
   P3: number;
   P4: number;
+  P5: number;
+  P6: number;
+  P7: number;
+  P8: number;
 }
-
-const GRID_SIZE = 4;
 
 const DEFAULT_BOUNDARIES: Record<BoundaryKey, number> = {
   top: 80,
-  right: 50,
+  east: 50,
   bottom: 40,
-  left: 10,
+  west: 10,
+  north: 25,
+  south: 65,
 };
 
-const CHART_COLORS = ["#000000", "#525252", "#a3a3a3", "#d4d4d4"];
+const CHART_COLORS = [
+  "#000000",
+  "#3f3f46",
+  "#52525b",
+  "#71717a",
+  "#a1a1aa",
+  "#b4b4bc",
+  "#d4d4d4",
+  "#e4e4e7",
+];
 
 function makeInitialGrid(boundaries: Record<BoundaryKey, number>): GridValue {
   const grid: GridValue = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => 0)
+    Array.from({ length: GRID_SIZE }, () =>
+      Array.from({ length: GRID_SIZE }, () => 0)
+    )
   );
-  for (let c = 0; c < GRID_SIZE; c++) {
-    grid[0][c] = boundaries.top;
-    grid[GRID_SIZE - 1][c] = boundaries.bottom;
-  }
-  for (let r = 0; r < GRID_SIZE; r++) {
-    grid[r][0] = boundaries.left;
-    grid[r][GRID_SIZE - 1] = boundaries.right;
+  for (let i = 0; i < GRID_SIZE; i++) {
+    for (let j = 0; j < GRID_SIZE; j++) {
+      for (let k = 0; k < GRID_SIZE; k++) {
+        if (i === 0) grid[i][j][k] = boundaries.west;
+        if (i === GRID_SIZE - 1) grid[i][j][k] = boundaries.east;
+        if (j === 0) grid[i][j][k] = boundaries.bottom;
+        if (j === GRID_SIZE - 1) grid[i][j][k] = boundaries.top;
+        if (k === 0) grid[i][j][k] = boundaries.north;
+        if (k === GRID_SIZE - 1) grid[i][j][k] = boundaries.south;
+      }
+    }
   }
   return grid;
 }
 
 /* Frio → claro, Quente → escuro (paleta B&W computacional). */
-function heatColor(temp: number, min: number, max: number): string {
-  const span = Math.max(max - min, 1);
-  const t = Math.max(0, Math.min(1, (temp - min) / span));
-  const v = Math.round(245 - t * 220);
-  return `rgb(${v}, ${v}, ${v})`;
+
+function gridSnapshot(g: GridValue, iteration: number): PointHistory {
+  const item = { iteration, P1: 0, P2: 0, P3: 0, P4: 0, P5: 0, P6: 0, P7: 0, P8: 0 };
+  for (const key of INTERIOR_KEYS) {
+    const [i, j, k] = NODE_COORDS[key];
+    item[key] = g[i][j][k];
+  }
+  return item;
 }
 
-function textColorForTemperature(temp: number, min: number, max: number): string {
-  const span = Math.max(max - min, 1);
-  const t = Math.max(0, Math.min(1, (temp - min) / span));
-  return t > 0.55 ? "#ffffff" : "#18181b";
-}
-
-function nodeLabel(r: number, c: number): string {
-  if (r === 0 && c < 3) return "T";
-  if (r === 3 && c < 3) return "B";
-  if (c === 0 && r < 3) return "L";
-  if (c === 3 && r < 3) return "R";
-  if (r === 1 && c === 1) return "P1";
-  if (r === 1 && c === 2) return "P2";
-  if (r === 2 && c === 1) return "P3";
-  if (r === 2 && c === 2) return "P4";
-  return "";
-}
-
-function isBoundaryNode(r: number, c: number): boolean {
-  return r === 0 || c === 0 || r === GRID_SIZE - 1 || c === GRID_SIZE - 1;
+function solveOneStep(g: GridValue): number {
+  let maxDiff = 0;
+  for (let i = 1; i < GRID_SIZE - 1; i++) {
+    for (let j = 1; j < GRID_SIZE - 1; j++) {
+      for (let k = 1; k < GRID_SIZE - 1; k++) {
+        const newVal =
+          (g[i - 1][j][k] +
+            g[i + 1][j][k] +
+            g[i][j - 1][k] +
+            g[i][j + 1][k] +
+            g[i][j][k - 1] +
+            g[i][j][k + 1]) /
+          6;
+        maxDiff = Math.max(maxDiff, Math.abs(newVal - g[i][j][k]));
+        g[i][j][k] = newVal;
+      }
+    }
+  }
+  return maxDiff;
 }
 
 function reduceToDisplay(history: PointHistory[], maxPoints = 200) {
@@ -98,13 +141,16 @@ export default function LaplaceSolverClient() {
   const [grid, setGrid] = useState<GridValue>(() => makeInitialGrid(DEFAULT_BOUNDARIES));
   const [tolerance, setTolerance] = useState(0.001);
   const [iteration, setIteration] = useState(0);
-  const [history, setHistory] = useState<PointHistory[]>([
-    { iteration: 0, P1: 0, P2: 0, P3: 0, P4: 0 },
-  ]);
+  const [history, setHistory] = useState<PointHistory[]>([gridSnapshot(
+    makeInitialGrid(DEFAULT_BOUNDARIES),
+    0
+  )]);
   const [residual, setResidual] = useState(0);
-
-  const minTemp = useMemo(() => Math.min(...grid.flat()), [grid]);
-  const maxTemp = useMemo(() => Math.max(...grid.flat()), [grid]);
+  /* Campo denso (RES³) para a visualização 3D, avançado junto com o solver. */
+  const [field, setField] = useState<Float32Array>(() =>
+    makeInitialField(DEFAULT_BOUNDARIES)
+  );
+  const { minV, maxV } = useMemo(() => boundaryExtrema(boundaries), [boundaries]);
 
   const stepsTaken = Math.max(history.length - 1, 0);
   const converged = residual < tolerance && iteration > 0;
@@ -114,7 +160,8 @@ export default function LaplaceSolverClient() {
     setGrid(g);
     setIteration(0);
     setResidual(0);
-    setHistory([{ iteration: 0, P1: g[1][1], P2: g[1][2], P3: g[2][1], P4: g[2][2] }]);
+    setHistory([gridSnapshot(g, 0)]);
+    setField(makeInitialField(next));
   }
 
   function handleBoundaryChange(key: BoundaryKey, value: string) {
@@ -130,66 +177,43 @@ export default function LaplaceSolverClient() {
   }
 
   function runSingleStep() {
-    const g = grid.map((row) => [...row]);
-    let maxDiff = 0;
-    for (let r = 1; r < GRID_SIZE - 1; r++) {
-      for (let c = 1; c < GRID_SIZE - 1; c++) {
-        const newVal = (g[r - 1][c] + g[r + 1][c] + g[r][c - 1] + g[r][c + 1]) / 4;
-        maxDiff = Math.max(maxDiff, Math.abs(newVal - g[r][c]));
-        g[r][c] = newVal;
-      }
-    }
+    const g = grid.map((slice) => slice.map((row) => [...row]));
+    const maxDiff = solveOneStep(g);
     const newIteration = iteration + 1;
+    const f = field.slice();
+    sweepField(f);
     setGrid(g);
+    setField(f);
     setIteration(newIteration);
     setResidual(maxDiff);
-    setHistory((prev) => [
-      ...prev,
-      { iteration: newIteration, P1: g[1][1], P2: g[1][2], P3: g[2][1], P4: g[2][2] },
-    ]);
+    setHistory((prev) => [...prev, gridSnapshot(g, newIteration)]);
   }
 
   function runToConvergence() {
-    const g = grid.map((row) => [...row]);
+    const g = grid.map((slice) => slice.map((row) => [...row]));
+    const f = field.slice();
     let localIteration = iteration;
     let localResidual = Number.POSITIVE_INFINITY;
+    let localDenseResidual = Number.POSITIVE_INFINITY;
     const newHistory: PointHistory[] = [];
     const guard = 100000;
     let cycle = 0;
-    while (localResidual > tolerance && cycle < guard) {
+    while ((localResidual > tolerance || localDenseResidual > tolerance) && cycle < guard) {
       cycle++;
-      let maxDiff = 0;
-      for (let r = 1; r < GRID_SIZE - 1; r++) {
-        for (let c = 1; c < GRID_SIZE - 1; c++) {
-          const newVal = (g[r - 1][c] + g[r + 1][c] + g[r][c - 1] + g[r][c + 1]) / 4;
-          maxDiff = Math.max(maxDiff, Math.abs(newVal - g[r][c]));
-          g[r][c] = newVal;
-        }
-      }
       localIteration++;
+      const maxDiff = solveOneStep(g);
       localResidual = maxDiff;
-      newHistory.push({
-        iteration: localIteration,
-        P1: g[1][1],
-        P2: g[1][2],
-        P3: g[2][1],
-        P4: g[2][2],
-      });
+      localDenseResidual = sweepField(f);
+      newHistory.push(gridSnapshot(g, localIteration));
     }
     setGrid(g);
+    setField(f);
     setIteration(localIteration);
     setResidual(localResidual);
     if (newHistory.length > 0) setHistory((prev) => [...prev, ...newHistory]);
   }
 
   const displayHistory = useMemo(() => reduceToDisplay(history, 200), [history]);
-
-  const nodeCoords: Record<string, [number, number]> = {
-    P1: [1, 1],
-    P2: [1, 2],
-    P3: [2, 1],
-    P4: [2, 2],
-  };
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
@@ -202,19 +226,19 @@ export default function LaplaceSolverClient() {
                 ∇²
               </div>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Física Numérica / Resolvedor de Laplace
+                Física Numérica / Resolvedor de Laplace 3D
               </span>
             </div>
 
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
                 <h1 className="text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-                  Transferência de Calor 2D
+                  Transferência de Calor 3D
                 </h1>
                 <p className="mt-3 max-w-2xl font-mono text-sm leading-6 text-zinc-500">
-                  Resolução da Equação de Laplace (∇²T = 0) por diferenças finitas
-                  via método de Gauss-Seidel, com atualização sequencial dos nós
-                  internos P1–P4.
+                  Resolução da Equação de Laplace (∇²T = 0) em um domínio
+                  tridimensional por diferenças finitas via método de Gauss-Seidel,
+                  com atualização sequencial dos nós internos P1–P8.
                 </p>
               </div>
             </div>
@@ -231,31 +255,47 @@ export default function LaplaceSolverClient() {
                   ENTRADA / 01
                 </div>
                 <h2 className="mt-1 text-lg font-semibold">Condições de contorno</h2>
+                <p className="mt-1 font-mono text-[10px] leading-4 text-zinc-400">
+                  Seis faces do sólido: superior, inferior, frente, fundo, esquerda
+                  e direita.
+                </p>
               </div>
 
               <div className="space-y-5">
                 <NumberInput
-                  label="Superior"
+                  label="Superior (topo)"
                   value={boundaries.top}
                   onChange={(v) => handleBoundaryChange("top", String(v))}
                   suffix="°C"
                 />
                 <NumberInput
-                  label="Direita"
-                  value={boundaries.right}
-                  onChange={(v) => handleBoundaryChange("right", String(v))}
-                  suffix="°C"
-                />
-                <NumberInput
-                  label="Inferior"
+                  label="Inferior (base)"
                   value={boundaries.bottom}
                   onChange={(v) => handleBoundaryChange("bottom", String(v))}
                   suffix="°C"
                 />
                 <NumberInput
-                  label="Esquerda"
-                  value={boundaries.left}
-                  onChange={(v) => handleBoundaryChange("left", String(v))}
+                  label="Frente (norte)"
+                  value={boundaries.north}
+                  onChange={(v) => handleBoundaryChange("north", String(v))}
+                  suffix="°C"
+                />
+                <NumberInput
+                  label="Fundo (sul)"
+                  value={boundaries.south}
+                  onChange={(v) => handleBoundaryChange("south", String(v))}
+                  suffix="°C"
+                />
+                <NumberInput
+                  label="Esquerda (oeste)"
+                  value={boundaries.west}
+                  onChange={(v) => handleBoundaryChange("west", String(v))}
+                  suffix="°C"
+                />
+                <NumberInput
+                  label="Direita (leste)"
+                  value={boundaries.east}
+                  onChange={(v) => handleBoundaryChange("east", String(v))}
                   suffix="°C"
                 />
               </div>
@@ -347,17 +387,22 @@ export default function LaplaceSolverClient() {
                   <span className="text-zinc-600">+</span>
                   <span>P_S</span>
                   <span className="text-zinc-600">+</span>
+                  <span>P_O</span>
+                  <span className="text-zinc-600">+</span>
                   <span>P_L</span>
                   <span className="text-zinc-600">+</span>
-                  <span>P_O</span>
+                  <span>P_SUP</span>
+                  <span className="text-zinc-600">+</span>
+                  <span>P_INF</span>
                   <span className="text-zinc-400">)</span>
                   <span className="text-zinc-600">/</span>
-                  <span>4</span>
+                  <span>6</span>
                 </div>
 
                 <p className="mt-3 max-w-xl font-mono text-sm leading-6 text-zinc-400">
-                  Cada nó interno é a média aritmética dos seus quatro vizinhos
-                  imediatos, atualizada sequencialmente (Gauss-Seidel).
+                  Cada nó interno é a média aritmética dos seus seis vizinhos
+                  imediatos (N, S, O, L, superior e inferior), atualizada
+                  sequencialmente (Gauss-Seidel).
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-3 font-mono text-xs">
@@ -365,20 +410,20 @@ export default function LaplaceSolverClient() {
                     ∇²T = 0
                   </span>
                   <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    malha {GRID_SIZE}×{GRID_SIZE}
+                    malha {GRID_SIZE}×{GRID_SIZE}×{GRID_SIZE}
                   </span>
                   <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
                     ε = {tolerance}
                   </span>
                   <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    nós internos = 4
+                    nós internos = 8
                   </span>
                 </div>
               </div>
             </section>
 
             {/* Result + Plate */}
-            <section className="grid gap-6 md:grid-cols-2">
+            <section className="grid gap-6 md:grid-cols-[300px_1fr]">
               <div className="relative overflow-hidden rounded-2xl bg-zinc-950 p-6 text-white">
                 <div className="absolute right-5 top-5 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
                   SISTEMA LINEAR
@@ -386,14 +431,14 @@ export default function LaplaceSolverClient() {
                 <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                   VALORES CONVERGIDOS
                 </div>
-                <div className="mt-4 space-y-2 font-mono">
-                  {(["P1", "P2", "P3", "P4"] as const).map((p) => {
-                    const [r, c] = nodeCoords[p];
+                <div className="mt-4 space-y-2.5 font-mono">
+                  {INTERIOR_KEYS.map((p) => {
+                    const [i, j, k] = NODE_COORDS[p];
                     return (
                       <div key={p} className="flex items-center justify-between">
                         <span className="text-zinc-400">{p}</span>
                         <span className="text-lg font-semibold tracking-tight">
-                          {grid[r][c].toFixed(2)} °C
+                          {grid[i][j][k].toFixed(2)} °C
                         </span>
                       </div>
                     );
@@ -402,54 +447,21 @@ export default function LaplaceSolverClient() {
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-6">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-                  MALHA / 04
-                </div>
-                <p className="mt-1 font-semibold">Mapa de calor (placa)</p>
-
-                <div className="mt-5 flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-                  <span>frio</span>
-                  <div className="h-1.5 flex-1 bg-gradient-to-r from-zinc-200 to-zinc-900" />
-                  <span>quente</span>
-                </div>
-
-                <div
-                  className="mt-3 grid gap-1"
-                  style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-                >
-                  {grid.map((row, r) =>
-                    row.map((value, c) => {
-                      const bg = heatColor(value, minTemp, maxTemp);
-                      const fg = textColorForTemperature(value, minTemp, maxTemp);
-                      const boundary = isBoundaryNode(r, c);
-                      const label = nodeLabel(r, c);
-                      return (
-                        <div
-                          key={`${r}-${c}`}
-                          className="relative flex aspect-square items-center justify-center border text-center"
-                          style={{
-                            backgroundColor: bg,
-                            borderColor: boundary ? "#18181b" : "rgba(0,0,0,0.08)",
-                            color: fg,
-                          }}
-                        >
-                          <span className="font-mono text-sm font-semibold">
-                            {value.toFixed(0)}
-                          </span>
-                          {label && (
-                            <span className="absolute left-1 top-1 font-mono text-[7px] opacity-50">
-                              {label}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                      MALHA / 04
+                    </div>
+                    <p className="mt-1 font-semibold">Isotermas & linhas de fluxo (3D)</p>
+                  </div>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400">
+                    malha {GRID_SIZE}×{GRID_SIZE}×{GRID_SIZE}
+                  </span>
                 </div>
 
-                <p className="mt-3 font-mono text-[10px] text-zinc-400">
-                  Escala: {minTemp.toFixed(0)} °C → {maxTemp.toFixed(0)} °C (claro → escuro)
-                </p>
+                <div className="relative mt-3 h-[480px] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                  <HeatPlate3D field={field} minV={minV} maxV={maxV} />
+                </div>
               </div>
             </section>
 
@@ -495,14 +507,15 @@ export default function LaplaceSolverClient() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse font-mono text-xs">
+                <table className="w-full min-w-[900px] border-collapse font-mono text-xs">
                   <thead>
                     <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-[10px] uppercase tracking-wider text-zinc-400">
                       <th className="px-5 py-4">#</th>
-                      <th className="px-5 py-4">P1</th>
-                      <th className="px-5 py-4">P2</th>
-                      <th className="px-5 py-4">P3</th>
-                      <th className="px-5 py-4">P4</th>
+                      {INTERIOR_KEYS.map((key) => (
+                        <th key={key} className="px-5 py-4">
+                          {key}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -516,10 +529,16 @@ export default function LaplaceSolverClient() {
                           <td className="px-5 py-3 text-zinc-400">
                             {String(item.iteration).padStart(3, "0")}
                           </td>
-                          <td className="px-5 py-3">{item.P1.toFixed(6)}</td>
-                          <td className="px-5 py-3">{item.P2.toFixed(6)}</td>
-                          <td className="px-5 py-3">{item.P3.toFixed(6)}</td>
-                          <td className="px-5 py-3 font-semibold">{item.P4.toFixed(6)}</td>
+                          {INTERIOR_KEYS.map((key, idx) => (
+                            <td
+                              key={key}
+                              className={`px-5 py-3 ${
+                                idx === INTERIOR_KEYS.length - 1 ? "font-semibold" : ""
+                              }`}
+                            >
+                              {item[key].toFixed(6)}
+                            </td>
+                          ))}
                         </tr>
                       ))}
                   </tbody>
@@ -568,8 +587,8 @@ export default function LaplaceSolverClient() {
                         fontSize: 12,
                       }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {(["P1", "P2", "P3", "P4"] as const).map((key, i) => (
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {INTERIOR_KEYS.map((key, i) => (
                       <Line
                         key={key}
                         type="monotone"
@@ -600,32 +619,32 @@ export default function LaplaceSolverClient() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card
-              title="Equação de Laplace"
-              description="Resolve ∇²T = 0 no regime estacionário com as condições de contorno informadas nas quatro bordas."
+              title="Equação de Laplace 3D"
+              description="Resolve ∇²T = 0 no regime estacionário com condições de contorno em seis faces do sólido tridimensional."
             />
             <Card
               title="Gauss-Seidel"
-              description="Atualiza cada nó interno P1–P4 como média sequencial dos quatro vizinhos mais recentes."
+              description="Atualiza cada nó interno P1–P8 como média sequencial dos seis vizinhos mais recentes (estêncil 6 pontos)."
             />
             <Card
-              title="Contorno editável"
-              description="Altera Superior, Direita, Inferior e Esquerda em tempo real, reconstruindo a malha imediatamente."
+              title="Contorno em seis faces"
+              description="Altera Superior, Inferior, Frente, Fundo, Esquerda e Direita em tempo real, reconstruindo a malha 4×4×4 imediatamente."
             />
             <Card
               title="Convergência"
               description="Para quando a maior variação entre iterações fica abaixo da tolerância ε definida."
             />
             <Card
-              title="Mapa de calor"
-              description="Malha 4×4 com intensidade de temperatura em escala computacional (claro → escuro)."
+              title="Sala de aula 3D"
+              description="Visualização com Three.js: casca translúcida com as faces de contorno e núcleo sólido com os nós internos, orbitável."
             />
             <Card
               title="Histórico numérico"
-              description="Registro completo das iterações com os valores de P1, P2, P3 e P4 em cada passo."
+              description="Registro completo das iterações com os valores de P1 a P8 em cada passo."
             />
             <Card
               title="Evolução gráfica"
-              description="Gráfico de linhas mostrando a trajetória dos quatro nós internos até a convergência."
+              description="Gráfico de linhas mostrando a trajetória dos oito nós internos até a convergência."
             />
             <Card
               title="100% client-side"
@@ -641,7 +660,7 @@ export default function LaplaceSolverClient() {
         {/* Footer */}
         <footer className="mt-10 flex flex-col justify-between gap-3 border-t border-zinc-200 pt-6 font-mono text-[10px] uppercase tracking-wider text-zinc-400 md:flex-row">
           <span>Interface de computação numérica</span>
-          <span>TypeScript / React / Next.js / Tailwind</span>
+          <span>TypeScript / React / Three.js / Next.js / Tailwind</span>
         </footer>
       </div>
     </main>
