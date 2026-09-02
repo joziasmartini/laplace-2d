@@ -7,11 +7,21 @@ import * as THREE from "three";
 import { FIELD_RES, trilinear } from "@/lib/laplaceField";
 
 /* Domínio discreto: campo entregue via prop (RES×RES×RES), com o sólido
-   (fisicamente) ocupando o intervalo [0, RES-1]³ em cada eixo. Centramos em
-   (0,0,0) ao montar as geometrias (deslocamento HALF). */
+   (fisicamente) ocupando o intervalo [0, RES-1]³ no espaço da malha. Na cena,
+   cada eixo é REDIMENSIONADO para formar um retângulo (cuboide, estilo sala de
+   aula: mais comprido que alto) e centralizado em (0,0,0). */
 const RES = FIELD_RES;
 const EXTENT = RES - 1;
-const HALF = EXTENT / 2;
+
+/* Dimensões do retângulo no mundo (u.m.). */
+const DIMS = { x: 24, y: 12, z: 17 };
+const SCALE = { x: DIMS.x / EXTENT, y: DIMS.y / EXTENT, z: DIMS.z / EXTENT };
+const CENTER = { x: DIMS.x / 2, y: DIMS.y / 2, z: DIMS.z / 2 };
+
+/* Mapeia coordenadas de malha (0..EXTENT)³ → mundo centrado (0,0,0). */
+function toWorld(x: number, y: number, z: number): [number, number, number] {
+  return [x * SCALE.x - CENTER.x, y * SCALE.y - CENTER.y, z * SCALE.z - CENTER.z];
+}
 
 const ISO_LEVELS = 6;
 const FLUX_MAX_STEPS = 160;
@@ -118,7 +128,7 @@ function isoSurface(field: Float32Array, n: number, iso: number) {
     if (i < 0 || j < 0 || k < 0 || i >= m || j >= m || k >= m) return null;
     const c = cid(i, j, k);
     if (!has[c]) return null;
-    return [vpos[c * 3] - HALF, vpos[c * 3 + 1] - HALF, vpos[c * 3 + 2] - HALF];
+    return toWorld(vpos[c * 3], vpos[c * 3 + 1], vpos[c * 3 + 2]);
   };
 
   const emitQuad = (a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]) => {
@@ -261,7 +271,9 @@ function traceFluxLines(
       const t1 = trilinear(field, n, nx, ny, nz);
       const [r0, g0, bl0] = coldHotRGB((t0 - minV) / (maxV - minV));
       const [r1, g1, bl1] = coldHotRGB((t1 - minV) / (maxV - minV));
-      segs.push(x - HALF, y - HALF, z - HALF, nx - HALF, ny - HALF, nz - HALF);
+      const [wx0, wy0, wz0] = toWorld(x, y, z);
+      const [wx1, wy1, wz1] = toWorld(nx, ny, nz);
+      segs.push(wx0, wy0, wz0, wx1, wy1, wz1);
       cols.push(
         r0 / 255, g0 / 255, bl0 / 255,
         r1 / 255, g1 / 255, bl1 / 255
@@ -285,16 +297,16 @@ const MODES: { id: Mode; label: string }[] = [
 ];
 
 function RoomEdges() {
-  const h = HALF;
+  const e = EXTENT;
   const corners: [number, number, number][] = [
-    [-h, -h, -h],
-    [h, -h, -h],
-    [h, h, -h],
-    [-h, h, -h],
-    [-h, -h, h],
-    [h, -h, h],
-    [h, h, h],
-    [-h, h, h],
+    toWorld(0, 0, 0),
+    toWorld(e, 0, 0),
+    toWorld(e, e, 0),
+    toWorld(0, e, 0),
+    toWorld(0, 0, e),
+    toWorld(e, 0, e),
+    toWorld(e, e, e),
+    toWorld(0, e, e),
   ];
   const pairs: [number, number][] = [
     [0, 1], [1, 2], [2, 3], [3, 0],
@@ -367,20 +379,20 @@ function HeatPlate3DScene({
       <RoomEdges />
 
       <Grid
-        position={[0, -HALF - 5, 0]}
-        args={[34, 34]}
+        position={[0, -CENTER.y - 8, 0]}
+        args={[26, 26]}
         cellSize={1}
         cellColor="#e9e9ec"
         sectionSize={4}
         sectionColor="#d4d4d8"
-        fadeDistance={50}
+        fadeDistance={55}
         fadeStrength={3}
       />
       <OrbitControls
         makeDefault
         enablePan={false}
-        minDistance={10}
-        maxDistance={90}
+        minDistance={6}
+        maxDistance={80}
         target={[0, 0, 0]}
       />
     </>
@@ -424,7 +436,7 @@ export default function HeatPlate3D({
 
       <div className="relative mt-3 h-[480px] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
         <Canvas
-          camera={{ position: [40, 32, 46], fov: 40 }}
+          camera={{ position: [40, 24, 44], fov: 40 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: true }}
         >
