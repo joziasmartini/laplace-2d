@@ -388,6 +388,10 @@ export default function LaplaceSolverClient() {
 
               <div className="flex items-center justify-center px-6 py-6">
                 <div className="relative w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                  <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-400 md:px-5">
+                    <span>Isotermas · Linhas de fluxo · Ambos</span>
+                    <span>campo na iteração atual · malha 4×4×4</span>
+                  </div>
                   <div className="relative h-[420px] w-full md:h-[520px]">
                     <HeatPlate3D field={field} minV={minV} maxV={maxV} />
                   </div>
