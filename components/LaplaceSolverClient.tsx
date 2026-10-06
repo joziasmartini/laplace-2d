@@ -581,7 +581,7 @@ export default function LaplaceSolverClient() {
                        dataKey="iteration"
                        type="number"
                        allowDecimals={false}
-                       domain={["dataMin", Math.max(30, Math.min(200, displayHistory.length > 1 ? displayHistory[displayHistory.length - 1].iteration : 200))]}
+                       domain={["dataMin", displayHistory.length > 1 ? Math.min(displayHistory[displayHistory.length - 1].iteration, 100) : 100]}
                        label={{ value: "iteração", position: "insideBottom", offset: -2, fontSize: 11 }}
                        tick={{ fontSize: 11 }}
                        stroke="#71717a"
