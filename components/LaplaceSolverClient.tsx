@@ -575,44 +575,45 @@ export default function LaplaceSolverClient() {
               </div>
               <div className="h-80 w-full p-3">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={displayHistory} margin={{ top: 10, right: 18, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.25)" />
-                    <XAxis
-                      dataKey="iteration"
-                      type="number"
-                      allowDecimals={false}
-                      label={{ value: "iteração", position: "insideBottom", offset: -2, fontSize: 11 }}
-                      tick={{ fontSize: 11 }}
-                      stroke="#71717a"
-                    />
-                    <YAxis
-                      label={{ value: "°C", angle: -90, position: "insideLeft", fontSize: 11 }}
-                      tick={{ fontSize: 11 }}
-                      stroke="#71717a"
-                    />
-                    <Tooltip
-                      formatter={(value, name) => [`${Number(value).toFixed(4)} °C`, String(name)]}
-                      labelFormatter={(label) => `iteração ${label}`}
-                      contentStyle={{
-                        borderRadius: 10,
-                        border: "1px solid #e4e4e7",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                        fontSize: 12,
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {INTERIOR_KEYS.map((key, i) => (
-                      <Line
-                        key={key}
-                        type="monotone"
-                        dataKey={key}
-                        stroke={CHART_COLORS[i]}
-                        strokeWidth={2}
-                        dot={false}
-                        isAnimationActive={false}
-                      />
-                    ))}
-                  </LineChart>
+                   <LineChart data={displayHistory} margin={{ top: 10, right: 18, bottom: 5, left: 0 }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.25)" />
+                     <XAxis
+                       dataKey="iteration"
+                       type="number"
+                       allowDecimals={false}
+                       domain={["dataMin", Math.max(30, Math.min(200, displayHistory.length > 1 ? displayHistory[displayHistory.length - 1].iteration : 200))]}
+                       label={{ value: "iteração", position: "insideBottom", offset: -2, fontSize: 11 }}
+                       tick={{ fontSize: 11 }}
+                       stroke="#71717a"
+                     />
+                     <YAxis
+                       label={{ value: "°C", angle: -90, position: "insideLeft", fontSize: 11 }}
+                       tick={{ fontSize: 11 }}
+                       stroke="#71717a"
+                     />
+                     <Tooltip
+                       formatter={(value, name) => [`${Number(value).toFixed(4)} °C`, String(name)]}
+                       labelFormatter={(label) => `iteração ${label}`}
+                       contentStyle={{
+                         borderRadius: 10,
+                         border: "1px solid #e4e4e7",
+                         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                         fontSize: 12,
+                       }}
+                     />
+                     <Legend wrapperStyle={{ fontSize: 11 }} />
+                     {INTERIOR_KEYS.map((key, i) => (
+                       <Line
+                         key={key}
+                         type="monotone"
+                         dataKey={key}
+                         stroke={CHART_COLORS[i]}
+                         strokeWidth={2}
+                         dot={false}
+                         isAnimationActive={false}
+                       />
+                     ))}
+                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </section>
