@@ -415,34 +415,34 @@ export default function HeatPlate3D({
 
   return (
     <div>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-xl border border-zinc-200 bg-white p-1">
-          {MODES.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setMode(id)}
-              className={`rounded-lg px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-wider transition ${
-                mode === id ? "bg-zinc-950 text-white" : "text-zinc-500 hover:text-zinc-950"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-          campo na iteração atual · malha {RES}³
-        </span>
-      </div>
+       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+         <div className="flex gap-1 rounded-xl border border-zinc-200 bg-white p-1">
+           {MODES.map(({ id, label }) => (
+             <button
+               key={id}
+               onClick={() => setMode(id)}
+               className={`rounded-lg px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-wider transition ${
+                 mode === id ? "bg-zinc-950 text-white" : "text-zinc-500 hover:text-zinc-950"
+               }`}
+             >
+               {label}
+             </button>
+           ))}
+         </div>
+         <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400 text-right">
+           campo na iteração atual · malha {RES}³
+         </span>
+       </div>
 
-      <div className="relative mt-3 h-[480px] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
-        <Canvas
-          camera={{ position: [40, 24, 44], fov: 40 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: true }}
-        >
-          <HeatPlate3DScene isoMeshes={isoMeshes} flux={flux} mode={mode} />
-        </Canvas>
-      </div>
+       <div className="relative mt-3 h-[420px] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white md:h-[520px]">
+         <Canvas
+           camera={{ position: [40, 24, 44], fov: 40 }}
+           dpr={[1, 2]}
+           gl={{ antialias: true, alpha: true }}
+         >
+           <HeatPlate3DScene isoMeshes={isoMeshes} flux={flux} mode={mode} />
+         </Canvas>
+       </div>
 
       <div className="mt-3 flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
         <span>frio</span>
