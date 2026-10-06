@@ -415,7 +415,7 @@ export default function HeatPlate3D({
 
   return (
     <div>
-       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1">
          <div className="flex gap-1 rounded-xl border border-zinc-200 bg-white p-1">
            {MODES.map(({ id, label }) => (
              <button
