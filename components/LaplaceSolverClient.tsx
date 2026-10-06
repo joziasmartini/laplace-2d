@@ -370,84 +370,10 @@ export default function LaplaceSolverClient() {
 
           {/* Main results */}
           <div className="min-w-0 space-y-6">
-            {/* Equation */}
-            <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+            {/* Mesh / 3D visualization (top of right panel) */}
+            <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50/60">
               <div className="border-b border-zinc-200 px-6 py-4">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-                  EQUAÇÃO / 03
-                </div>
-              </div>
-
-              <div className="bg-zinc-950 px-6 py-10 text-white md:px-10">
-                <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-lg tracking-tight md:text-2xl">
-                  <span className="text-zinc-400">P_i</span>
-                  <span className="text-zinc-600">=</span>
-                  <span className="text-zinc-400">(</span>
-                  <span>P_N</span>
-                  <span className="text-zinc-600">+</span>
-                  <span>P_S</span>
-                  <span className="text-zinc-600">+</span>
-                  <span>P_O</span>
-                  <span className="text-zinc-600">+</span>
-                  <span>P_L</span>
-                  <span className="text-zinc-600">+</span>
-                  <span>P_SUP</span>
-                  <span className="text-zinc-600">+</span>
-                  <span>P_INF</span>
-                  <span className="text-zinc-400">)</span>
-                  <span className="text-zinc-600">/</span>
-                  <span>6</span>
-                </div>
-
-                <p className="mt-3 max-w-xl font-mono text-sm leading-6 text-zinc-400">
-                  Cada nó interno é a média aritmética dos seus seis vizinhos
-                  imediatos (N, S, O, L, superior e inferior), atualizada
-                  sequencialmente (Gauss-Seidel).
-                </p>
-
-                <div className="mt-8 flex flex-wrap items-center gap-3 font-mono text-xs">
-                  <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    ∇²T = 0
-                  </span>
-                  <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    malha {GRID_SIZE}×{GRID_SIZE}×{GRID_SIZE}
-                  </span>
-                  <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    ε = {tolerance}
-                  </span>
-                  <span className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-400">
-                    nós internos = 8
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            {/* Result + Plate */}
-            <section className="grid gap-6 md:grid-cols-[300px_1fr]">
-              <div className="relative overflow-hidden rounded-2xl bg-zinc-950 p-6 text-white">
-                <div className="absolute right-5 top-5 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
-                  SISTEMA LINEAR
-                </div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  VALORES CONVERGIDOS
-                </div>
-                <div className="mt-4 space-y-2.5 font-mono">
-                  {INTERIOR_KEYS.map((p) => {
-                    const [i, j, k] = NODE_COORDS[p];
-                    return (
-                      <div key={p} className="flex items-center justify-between">
-                        <span className="text-zinc-400">{p}</span>
-                        <span className="text-lg font-semibold tracking-tight">
-                          {grid[i][j][k].toFixed(2)} °C
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
                       MALHA / 04
@@ -458,9 +384,96 @@ export default function LaplaceSolverClient() {
                     malha {GRID_SIZE}×{GRID_SIZE}×{GRID_SIZE}
                   </span>
                 </div>
+              </div>
 
-                <div className="relative mt-3 h-[480px] w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
-                  <HeatPlate3D field={field} minV={minV} maxV={maxV} />
+              <div className="flex items-center justify-center px-6 py-6">
+                <div className="relative w-full overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                  <div className="relative h-[420px] w-full md:h-[520px]">
+                    <HeatPlate3D field={field} minV={minV} maxV={maxV} />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Equation */}
+            <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50/60">
+              <div className="border-b border-zinc-200 px-6 py-4">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                  EQUAÇÃO / 03
+                </div>
+              </div>
+
+              <div className="space-y-4 px-6 py-6 md:px-6">
+                <div className="rounded-xl border border-zinc-200 bg-white p-6">
+                  <div className="flex flex-wrap items-baseline justify-start gap-x-3 font-mono text-lg tracking-tight md:text-2xl">
+                    <span className="text-zinc-600">P_i</span>
+                    <span className="text-zinc-400">=</span>
+                    <span className="text-zinc-600">(</span>
+                    <span>P_N</span>
+                    <span className="text-zinc-400">+</span>
+                    <span>P_S</span>
+                    <span className="text-zinc-400">+</span>
+                    <span>P_O</span>
+                    <span className="text-zinc-400">+</span>
+                    <span>P_L</span>
+                    <span className="text-zinc-400">+</span>
+                    <span>P_SUP</span>
+                    <span className="text-zinc-400">+</span>
+                    <span>P_INF</span>
+                    <span className="text-zinc-600">)</span>
+                    <span className="text-zinc-400">/</span>
+                    <span>6</span>
+                  </div>
+
+                  <p className="mt-3 max-w-xl font-mono text-sm leading-6 text-zinc-500">
+                    Cada nó interno é a média aritmética dos seus seis vizinhos
+                    imediatos (N, S, O, L, superior e inferior), atualizada
+                    sequencialmente (Gauss-Seidel).
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-zinc-200 bg-white p-5">
+                  <div className="flex flex-wrap items-center justify-start gap-3 font-mono text-xs">
+                    <span className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-zinc-500">
+                      ∇²T = 0
+                    </span>
+                    <span className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-zinc-500">
+                      malha {GRID_SIZE}×{GRID_SIZE}×{GRID_SIZE}
+                    </span>
+                    <span className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-zinc-500">
+                      ε = {tolerance}
+                    </span>
+                    <span className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-zinc-500">
+                      nós internos = 8
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Converted values */}
+            <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50/60">
+              <div className="border-b border-zinc-200 px-6 py-4">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                  VALORES CONVERGIDOS
+                </div>
+              </div>
+              <div className="px-6 py-5">
+                <div className="grid grid-cols-2 gap-2 font-mono text-[11px] md:grid-cols-4">
+                  {INTERIOR_KEYS.map((p) => {
+                    const [i, j, k] = NODE_COORDS[p];
+                    return (
+                      <div
+                        key={p}
+                        className="flex flex-col rounded-lg border border-zinc-200 bg-white px-2.5 py-2"
+                      >
+                        <span className="text-zinc-400">{p}</span>
+                        <span className="mt-0.5 truncate text-sm font-medium tracking-tight">
+                          {grid[i][j][k].toFixed(2)} °C
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
